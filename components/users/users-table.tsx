@@ -69,6 +69,90 @@ const roleLabel: Record<UserRole, string> = {
   customer: "مشتری",
 };
 
+/* -------- سلول جداگانه برای نقش (memo) -------- */
+
+type RoleCellProps = {
+  id: string;
+  role: UserRole;
+  onChange: (id: string, role: UserRole) => void;
+};
+
+const RoleCell: React.FC<RoleCellProps> = React.memo(
+  ({ id, role, onChange }) => {
+    const handleChange = (value: string) => {
+      const next = value as UserRole;
+      if (next !== role) {
+        onChange(id, next);
+      }
+    };
+
+    return (
+      <Select value={role} onValueChange={handleChange}>
+        <SelectTrigger className="h-8 bg-muted text-xs">
+          <SelectValue placeholder="نقش" />
+        </SelectTrigger>
+        <SelectContent align="end">
+          <SelectItem value="admin">{roleLabel.admin}</SelectItem>
+          <SelectItem value="operator">{roleLabel.operator}</SelectItem>
+          <SelectItem value="customer">{roleLabel.customer}</SelectItem>
+        </SelectContent>
+      </Select>
+    );
+  }
+);
+
+RoleCell.displayName = "RoleCell";
+
+/* -------- سلول جداگانه برای وضعیت (memo) -------- */
+
+type StatusCellProps = {
+  id: string;
+  status: UserStatus;
+  onChange: (id: string, status: UserStatus) => void;
+};
+
+const StatusCell: React.FC<StatusCellProps> = React.memo(
+  ({ id, status, onChange }) => {
+    const variant =
+      status === "Active"
+        ? "default"
+        : status === "Suspended"
+        ? "secondary"
+        : "destructive";
+
+    const handleChange = (value: string) => {
+      const next = value as UserStatus;
+      if (next !== status) {
+        onChange(id, next);
+      }
+    };
+
+    return (
+      <div className="flex items-center justify-end gap-2">
+        <Badge variant={variant} className="hidden md:inline-flex">
+          {statusLabel[status]}
+        </Badge>
+        <Select value={status} onValueChange={handleChange}>
+          <SelectTrigger className="h-8 w-28 bg-muted text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            <SelectItem value="Active">{statusLabel.Active}</SelectItem>
+            <SelectItem value="Suspended">
+              {statusLabel.Suspended}
+            </SelectItem>
+            <SelectItem value="Banned">{statusLabel.Banned}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+);
+
+StatusCell.displayName = "StatusCell";
+
+/* ------------------------- جدول اصلی ------------------------- */
+
 export function UsersTable({ data }: Props) {
   const [rows, setRows] = React.useState<User[]>(data);
   const [search, setSearch] = React.useState("");
@@ -78,6 +162,42 @@ export function UsersTable({ data }: Props) {
     React.useState<RoleFilter>("all");
 
   React.useEffect(() => setRows(data), [data]);
+
+  const deferredSearch = React.useDeferredValue(search);
+
+  const columnFilters = React.useMemo(
+    () => [
+      ...(statusFilter === "all"
+        ? []
+        : [{ id: "status", value: statusFilter }]),
+      ...(roleFilter === "all"
+        ? []
+        : [{ id: "role", value: roleFilter }]),
+    ],
+    [statusFilter, roleFilter]
+  );
+
+  const handleRoleChange = React.useCallback(
+    (id: string, role: UserRole) => {
+      setRows((prev) =>
+        prev.map((u) =>
+          u.id === id ? { ...u, role } : u
+        )
+      );
+    },
+    []
+  );
+
+  const handleStatusChange = React.useCallback(
+    (id: string, status: UserStatus) => {
+      setRows((prev) =>
+        prev.map((u) =>
+          u.id === id ? { ...u, status } : u
+        )
+      );
+    },
+    []
+  );
 
   const columns = React.useMemo<ColumnDef<User>[]>(
     () => [
@@ -126,87 +246,34 @@ export function UsersTable({ data }: Props) {
         accessorKey: "role",
         header: "نقش",
         cell: ({ row }) => (
-          <Select
-            value={row.original.role}
-            onValueChange={(value) =>
-              setRows((prev) =>
-                prev.map((u) =>
-                  u.id === row.original.id
-                    ? { ...u, role: value as UserRole }
-                    : u
-                )
-              )
-            }
-          >
-            <SelectTrigger className="h-8 bg-muted text-xs">
-              <SelectValue placeholder="نقش" />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value="admin">ادمین</SelectItem>
-              <SelectItem value="operator">اپراتور</SelectItem>
-              <SelectItem value="customer">مشتری</SelectItem>
-            </SelectContent>
-          </Select>
+          <RoleCell
+            id={row.original.id}
+            role={row.original.role}
+            onChange={handleRoleChange}
+          />
         ),
       },
       {
         accessorKey: "status",
         header: "وضعیت",
         cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-2">
-            <Badge
-              variant={
-                row.original.status === "Active"
-                  ? "default"
-                  : row.original.status === "Suspended"
-                  ? "secondary"
-                  : "destructive"
-              }
-              className="hidden md:inline-flex"
-            >
-              {statusLabel[row.original.status]}
-            </Badge>
-            <Select
-              value={row.original.status}
-              onValueChange={(value) =>
-                setRows((prev) =>
-                  prev.map((u) =>
-                    u.id === row.original.id
-                      ? { ...u, status: value as UserStatus }
-                      : u
-                  )
-                )
-              }
-            >
-              <SelectTrigger className="h-8 w-28 bg-muted text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end">
-                <SelectItem value="Active">فعال</SelectItem>
-                <SelectItem value="Suspended">معلق</SelectItem>
-                <SelectItem value="Banned">مسدود</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <StatusCell
+            id={row.original.id}
+            status={row.original.status}
+            onChange={handleStatusChange}
+          />
         ),
       },
     ],
-    []
+    [handleRoleChange, handleStatusChange]
   );
 
   const table = useReactTable({
     data: rows,
     columns,
     state: {
-      globalFilter: search,
-      columnFilters: [
-        ...(statusFilter === "all"
-          ? []
-          : [{ id: "status", value: statusFilter }]),
-        ...(roleFilter === "all"
-          ? []
-          : [{ id: "role", value: roleFilter }]),
-      ],
+      globalFilter: deferredSearch,
+      columnFilters,
     },
     globalFilterFn: (row, _columnId, filterValue) => {
       const q = String(filterValue ?? "").toLowerCase();

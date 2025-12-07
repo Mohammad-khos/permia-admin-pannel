@@ -58,25 +58,35 @@ export function VccInventoryTable({
     React.useState<StatusFilter>("all");
   const [minBalance, setMinBalance] = React.useState<string>("");
 
+  // sync با data بیرونی
   React.useEffect(() => {
     setRows(data);
   }, [data]);
 
   const columns = React.useMemo(() => createVccColumns(), []);
 
+  // سرچ رو defer می‌کنیم تا UI موقع تایپ/کلیک Select سبک‌تر بشه
+  const deferredGlobalFilter = React.useDeferredValue(globalFilter);
+
+  // columnFilters رو memo می‌کنیم تا هر رندر آرایه جدید ساخته نشه
+  const columnFilters = React.useMemo(
+    () => [
+      ...(statusFilter === "all"
+        ? []
+        : [{ id: "status", value: statusFilter }]),
+      ...(minBalance
+        ? [{ id: "balance", value: Number(minBalance) }]
+        : []),
+    ],
+    [statusFilter, minBalance]
+  );
+
   const table = useReactTable<VccCard>({
     data: rows,
     columns,
     state: {
-      globalFilter,
-      columnFilters: [
-        ...(statusFilter === "all"
-          ? []
-          : [{ id: "status", value: statusFilter }]),
-        ...(minBalance
-          ? [{ id: "balance", value: Number(minBalance) }]
-          : []),
-      ],
+      globalFilter: deferredGlobalFilter,
+      columnFilters,
     },
     meta: {
       onStatusChange: (id, status) => {
@@ -117,7 +127,7 @@ export function VccInventoryTable({
         <div className="flex gap-2">
           <Button
             onClick={onAddSingle}
-            className="bg-primary hover:bg-primary-500 text-accent-50"
+            className="bg-primary hover:bg-primary-500 text-white/95"
           >
             افزودن کارت تکی
           </Button>
@@ -130,6 +140,7 @@ export function VccInventoryTable({
       <CardContent className="space-y-4">
         {/* Toolbar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* سرچ عمومی */}
           <Input
             placeholder="جستجو بر اساس PAN یا Provider..."
             value={globalFilter}
@@ -137,12 +148,12 @@ export function VccInventoryTable({
             className="bg-white"
           />
 
+          {/* فیلتر وضعیت */}
           <Select
             value={statusFilter}
             onValueChange={(value) => {
               if (value === "all") setStatusFilter("all");
-              else
-                setStatusFilter(value as VccCard["status"]);
+              else setStatusFilter(value as VccCard["status"]);
             }}
           >
             <SelectTrigger className="bg-white">
@@ -150,16 +161,13 @@ export function VccInventoryTable({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">همه وضعیت‌ها</SelectItem>
-              <SelectItem value="Available">
-                قابل استفاده
-              </SelectItem>
-              <SelectItem value="Used">
-                مصرف‌شده
-              </SelectItem>
+              <SelectItem value="Available">قابل استفاده</SelectItem>
+              <SelectItem value="Used">مصرف‌شده</SelectItem>
               <SelectItem value="Expired">منقضی</SelectItem>
             </SelectContent>
           </Select>
 
+          {/* حداقل موجودی */}
           <Input
             type="number"
             placeholder="حداقل موجودی ($)"

@@ -51,32 +51,41 @@ type StatusFilter = "all" | SharedAccountStatus;
 export function SharedAccountsTable({ data, onAddAccount }: Props) {
   const [rows, setRows] = React.useState<SharedAccount[]>(data);
   const [globalFilter, setGlobalFilter] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] =
+    React.useState<StatusFilter>("all");
   const [capacityFilter, setCapacityFilter] =
     React.useState<CapacityFilterValue>("all");
 
+  // اگر داده از بیرون عوض شد، جدول رو sync می‌کنیم
   React.useEffect(() => {
     setRows(data);
   }, [data]);
 
-  const columns = React.useMemo(
-    () => createSharedAccountColumns(),
-    []
+  // ستون‌ها فقط یک‌بار ساخته شوند
+  const columns = React.useMemo(() => createSharedAccountColumns(), []);
+
+  // سرچ را defer می‌کنیم که UI موقع تایپ یا کلیک Select قفل نشود
+  const deferredGlobalFilter = React.useDeferredValue(globalFilter);
+
+  // columnFilters را با useMemo می‌سازیم تا هر رندر آرایه جدید ساخته نشود
+  const columnFilters = React.useMemo(
+    () => [
+      ...(statusFilter === "all"
+        ? []
+        : [{ id: "status", value: statusFilter }]),
+      ...(capacityFilter === "all"
+        ? []
+        : [{ id: "capacity", value: capacityFilter }]),
+    ],
+    [statusFilter, capacityFilter]
   );
 
   const table = useReactTable<SharedAccount>({
     data: rows,
     columns,
     state: {
-      globalFilter,
-      columnFilters: [
-        ...(statusFilter === "all"
-          ? []
-          : [{ id: "status", value: statusFilter }]),
-        ...(capacityFilter === "all"
-          ? []
-          : [{ id: "capacity", value: capacityFilter }]),
-      ],
+      globalFilter: deferredGlobalFilter,
+      columnFilters,
     },
     meta: {
       onStatusChange: (id, status) => {
@@ -99,6 +108,7 @@ export function SharedAccountsTable({ data, onAddAccount }: Props) {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    // این state فقط string سرچ را نگه می‌دارد
     onGlobalFilterChange: setGlobalFilter,
   });
 
@@ -115,7 +125,7 @@ export function SharedAccountsTable({ data, onAddAccount }: Props) {
         </div>
 
         <Button
-          className="bg-primary hover:bg-primary-500 text-accent-50"
+          className="bg-primary hover:bg-primary-500 text-white/95"
           onClick={onAddAccount}
         >
           افزودن اکانت جدید
@@ -125,6 +135,7 @@ export function SharedAccountsTable({ data, onAddAccount }: Props) {
       <CardContent className="space-y-4">
         {/* Toolbar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* سرچ */}
           <Input
             placeholder="جستجو بر اساس سرویس یا ایمیل..."
             value={globalFilter}
@@ -132,14 +143,15 @@ export function SharedAccountsTable({ data, onAddAccount }: Props) {
             className="bg-white"
           />
 
+          {/* فیلتر وضعیت */}
           <Select
             value={statusFilter}
             onValueChange={(value) => {
-              if (value === "all") setStatusFilter("all");
-              else
-                setStatusFilter(
-                  value as SharedAccountStatus
-                );
+              if (value === "all") {
+                setStatusFilter("all");
+              } else {
+                setStatusFilter(value as SharedAccountStatus);
+              }
             }}
           >
             <SelectTrigger className="bg-white">
@@ -148,15 +160,12 @@ export function SharedAccountsTable({ data, onAddAccount }: Props) {
             <SelectContent>
               <SelectItem value="all">همه وضعیت‌ها</SelectItem>
               <SelectItem value="Active">فعال</SelectItem>
-              <SelectItem value="Limited">
-                ظرفیت محدود
-              </SelectItem>
-              <SelectItem value="Disabled">
-                غیرفعال
-              </SelectItem>
+              <SelectItem value="Limited">ظرفیت محدود</SelectItem>
+              <SelectItem value="Disabled">غیرفعال</SelectItem>
             </SelectContent>
           </Select>
 
+          {/* فیلتر ظرفیت */}
           <Select
             value={capacityFilter}
             onValueChange={(value) =>

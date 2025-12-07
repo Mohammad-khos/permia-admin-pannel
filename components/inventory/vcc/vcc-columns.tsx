@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import {
   type ColumnDef,
   type FilterFn,
@@ -41,7 +42,11 @@ const statusMeta: Record<
   Expired: { label: "منقضی", variant: "destructive" },
 };
 
-const minBalanceFilter: FilterFn<VccCard> = (row, columnId, filterValue) => {
+const minBalanceFilter: FilterFn<VccCard> = (
+  row,
+  columnId,
+  filterValue
+) => {
   if (filterValue == null || filterValue === "") return true;
 
   const threshold = Number(filterValue as number | string);
@@ -50,6 +55,49 @@ const minBalanceFilter: FilterFn<VccCard> = (row, columnId, filterValue) => {
   const value = (row.getValue<number>(columnId) ?? 0) as number;
   return value >= threshold;
 };
+
+/** سلول وضعیت به صورت memo جدا */
+type StatusCellProps = {
+  id: string;
+  status: VccStatus;
+  onStatusChange?: (id: string, status: VccStatus) => void;
+};
+
+const StatusCell: React.FC<StatusCellProps> = React.memo(
+  ({ id, status, onStatusChange }) => {
+    const currentMeta = statusMeta[status];
+
+    const handleChange = (value: string) => {
+      const next = value as VccStatus;
+      if (next !== status) {
+        onStatusChange?.(id, next);
+      }
+    };
+
+    return (
+      <div className="flex items-center justify-end gap-2">
+        <Badge
+          variant={currentMeta.variant}
+          className="hidden md:inline-flex"
+        >
+          {currentMeta.label}
+        </Badge>
+        <Select value={status} onValueChange={handleChange}>
+          <SelectTrigger className="h-8 w-28 bg-muted border-border/70 text-xs">
+            <SelectValue placeholder="وضعیت" />
+          </SelectTrigger>
+          <SelectContent align="end">
+            <SelectItem value="Available">قابل استفاده</SelectItem>
+            <SelectItem value="Used">مصرف‌شده</SelectItem>
+            <SelectItem value="Expired">منقضی</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+);
+
+StatusCell.displayName = "StatusCell";
 
 export function createVccColumns(): ColumnDef<VccCard>[] {
   return [
@@ -122,37 +170,13 @@ export function createVccColumns(): ColumnDef<VccCard>[] {
       accessorKey: "status",
       header: "وضعیت",
       cell: ({ row, table }) => {
-        const status = row.original.status;
         const meta = table.options.meta as VccTableMeta | undefined;
-        const handleChange = (value: VccStatus) => {
-          meta?.onStatusChange?.(row.original.id, value);
-        };
-
-        const currentMeta = statusMeta[status];
-
         return (
-          <div className="flex items-center justify-end gap-2">
-            <Badge variant={currentMeta.variant} className="hidden md:inline-flex">
-              {currentMeta.label}
-            </Badge>
-            <Select
-              value={status}
-              onValueChange={(value) =>
-                handleChange(value as VccStatus)
-              }
-            >
-              <SelectTrigger className="h-8 w-28 bg-muted border-border/70 text-xs">
-                <SelectValue placeholder="وضعیت" />
-              </SelectTrigger>
-              <SelectContent align="end">
-                <SelectItem value="Available">
-                  قابل استفاده
-                </SelectItem>
-                <SelectItem value="Used">مصرف‌شده</SelectItem>
-                <SelectItem value="Expired">منقضی</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <StatusCell
+            id={row.original.id}
+            status={row.original.status}
+            onStatusChange={meta?.onStatusChange}
+          />
         );
       },
     },

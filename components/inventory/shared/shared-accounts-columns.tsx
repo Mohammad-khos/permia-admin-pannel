@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import {
   type ColumnDef,
   type FilterFn,
@@ -42,7 +43,7 @@ const statusMeta: Record<
 };
 
 const capacityFilter: FilterFn<SharedAccount> = (row, _id, filterValue) => {
-  if (!filterValue) return true;
+  if (!filterValue || filterValue === "all") return true;
   const value = row.original.usedSlots / row.original.maxSlots;
   if (filterValue === "low") return value <= 0.5; // ظرفیت آزاد زیاد
   if (filterValue === "high") return value >= 0.9; // تقریبا پر
@@ -50,6 +51,52 @@ const capacityFilter: FilterFn<SharedAccount> = (row, _id, filterValue) => {
 };
 
 export type CapacityFilterValue = "all" | "low" | "high";
+
+/**
+ * سلکت وضعیت به صورت کامپوننت جدا + memo
+ * تا فقط وقتی status یا id عوض شد رندر شود.
+ */
+type StatusCellProps = {
+  id: string;
+  status: SharedAccountStatus;
+  onStatusChange?: (id: string, status: SharedAccountStatus) => void;
+};
+
+const StatusCell: React.FC<StatusCellProps> = React.memo(
+  ({ id, status, onStatusChange }) => {
+    const currentMeta = statusMeta[status];
+
+    const handleChange = (value: string) => {
+      const next = value as SharedAccountStatus;
+      if (next !== status) {
+        onStatusChange?.(id, next);
+      }
+    };
+
+    return (
+      <div className="flex items-center justify-end gap-2">
+        <Badge
+          variant={currentMeta.variant}
+          className="hidden md:inline-flex"
+        >
+          {currentMeta.label}
+        </Badge>
+        <Select value={status} onValueChange={handleChange}>
+          <SelectTrigger className="h-8 w-28 bg-muted border-border/70 text-xs">
+            <SelectValue placeholder="وضعیت" />
+          </SelectTrigger>
+          <SelectContent align="end">
+            <SelectItem value="Active">فعال</SelectItem>
+            <SelectItem value="Limited">ظرفیت محدود</SelectItem>
+            <SelectItem value="Disabled">غیرفعال</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+);
+
+StatusCell.displayName = "StatusCell";
 
 export function createSharedAccountColumns(): ColumnDef<SharedAccount>[] {
   return [
@@ -123,38 +170,13 @@ export function createSharedAccountColumns(): ColumnDef<SharedAccount>[] {
       accessorKey: "status",
       header: "وضعیت",
       cell: ({ row, table }) => {
-        const status = row.original.status;
-        const meta = table.options.meta as
-          | SharedAccountTableMeta
-          | undefined;
-
-        const handleChange = (value: SharedAccountStatus) => {
-          meta?.onStatusChange?.(row.original.id, value);
-        };
-
-        const currentMeta = statusMeta[status];
-
+        const meta = table.options.meta as SharedAccountTableMeta | undefined;
         return (
-          <div className="flex items-center justify-end gap-2">
-            <Badge variant={currentMeta.variant} className="hidden md:inline-flex">
-              {currentMeta.label}
-            </Badge>
-            <Select
-              value={status}
-              onValueChange={(value) =>
-                handleChange(value as SharedAccountStatus)
-              }
-            >
-              <SelectTrigger className="h-8 w-28 bg-muted border-border/70 text-xs">
-                <SelectValue placeholder="وضعیت" />
-              </SelectTrigger>
-              <SelectContent align="end">
-                <SelectItem value="Active">فعال</SelectItem>
-                <SelectItem value="Limited">ظرفیت محدود</SelectItem>
-                <SelectItem value="Disabled">غیرفعال</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <StatusCell
+            id={row.original.id}
+            status={row.original.status}
+            onStatusChange={meta?.onStatusChange}
+          />
         );
       },
     },
