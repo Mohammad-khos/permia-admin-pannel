@@ -1,0 +1,71 @@
+/* app/globals.css */
+
+/* ۱) فعال کردن Tailwind v4 */
+@import "tailwindcss";
+
+
+@theme {
+  /* فونت پیش‌فرض پروژه (از next/font/local می‌آد) */
+  --font-sans: var(--font-dana), system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+
+  /* 🎨 پالت آبی سازمانی نرم (نه تند، نه کدر) */
+  --color-primary-50:  #f3f7ff;
+  --color-primary-100: #e1ecff;
+  --color-primary-200: #c5d9ff;
+  --color-primary-300: #9fbfff;
+  --color-primary-400: #7aa4ff;
+  --color-primary-500: #4f82f5;   /* آبی اصلی دکمه‌ها */
+  --color-primary-600: #3565d6;
+  --color-primary-700: #274cb0;
+  --color-primary-800: #203d86;
+  --color-primary-900: #192b57;
+
+  /* برای استفاده به صورت bg-primary و text-primary */
+  --color-primary: var(--color-primary-500);
+
+  /* اکسنت آبی-فیروزه‌ای لطیف برای Badge/Highlight و CTAهای خاص */
+  --color-accent-50:  #edf9ff;
+  --color-accent-100: #d6f0ff;
+  --color-accent-200: #b2e0ff;
+  --color-accent-300: #84ccff;
+  --color-accent-400: #4fb2f5;
+  --color-accent-500: #2196f3;
+  --color-accent-600: #1879cc;
+  --color-accent-700: #165f9f;
+  --color-accent-800: #144a7a;
+  --color-accent-900: #0f3452;
+
+  --color-accent: var(--color-accent-400);
+
+  /* پس‌زمینه‌های لایت */
+  --color-surface: #ffffff;   /* کارت‌ها / باکس‌ها */
+  --color-muted:   #f4f6fb;   /* بک‌گراند کلی پنل، کمی آبی و خیلی روشن */
+
+  /* خطوط و مرزها با ته‌مایه آبی */
+  --color-border: #dde3f3;
+}
+
+
+/* ۳) استایل‌های بیس (می‌تونی کم/زیادش کنی) */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    direction: rtl;
+    background-color: var(--color-muted); /* معادل bg-gray-50 خودت */
+    color: #111827;
+    font-family: var(--font-dana), system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", sans-serif;
+  }
+}
